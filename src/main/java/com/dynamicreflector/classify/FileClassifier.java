@@ -108,6 +108,8 @@ public final class FileClassifier {
                 || combined.contains("broadcastreceiver")
                 || combined.contains("notificationlistenerservice")
                 || combined.contains("worker")
+                || combined.contains("fragment")
+                || combined.contains("application")
                 || combined.contains("contentprovider");
     }
 

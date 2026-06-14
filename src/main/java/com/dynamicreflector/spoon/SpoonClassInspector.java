@@ -7,7 +7,9 @@ import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtParameter;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.reference.CtTypeReference;
-import spoon.support.reflect.CtExtendedModifier;
+import spoon.support.reflect.declaration.CtAnnotationTypeImpl;
+import spoon.support.reflect.declaration.CtEnumImpl;
+import spoon.support.reflect.declaration.CtInterfaceImpl;
 import spoon.reflect.declaration.ModifierKind;
 
 import java.io.File;
@@ -69,26 +71,44 @@ public final class SpoonClassInspector {
                 interfaces,
                 methods,
                 fieldCount,
-                staticFinalFieldCount
+                staticFinalFieldCount,
+                type instanceof CtInterfaceImpl,
+                type.hasModifier(ModifierKind.ABSTRACT),
+                type instanceof CtEnumImpl,
+                type instanceof CtAnnotationTypeImpl
         );
     }
 
     private MethodInfo toMethodInfo(CtMethod<?> method) {
         List<String> parameterTypes = new ArrayList<>();
+        List<String> parameterNames = new ArrayList<>();
+        boolean varArgs = false;
         for (CtParameter<?> parameter : method.getParameters()) {
             CtTypeReference<?> type = parameter.getType();
             parameterTypes.add(type == null ? "unknown" : type.getQualifiedName());
+            parameterNames.add(parameter.getSimpleName());
+            varArgs = varArgs || parameter.isVarArgs();
         }
+        List<String> thrownTypes = method.getThrownTypes()
+                .stream()
+                .map(CtTypeReference::getQualifiedName)
+                .collect(Collectors.toList());
         CtTypeReference<?> returnType = method.getType();
         CtBlock<?> body = method.getBody();
         return new MethodInfo(
                 method.getSimpleName(),
                 returnType == null ? "void" : returnType.getQualifiedName(),
+                parameterNames,
                 parameterTypes,
+                thrownTypes,
                 method.hasModifier(ModifierKind.STATIC),
                 method.hasModifier(ModifierKind.PUBLIC),
                 method.hasModifier(ModifierKind.PROTECTED),
                 method.hasModifier(ModifierKind.PRIVATE),
+                method.hasModifier(ModifierKind.ABSTRACT),
+                method.hasModifier(ModifierKind.NATIVE),
+                varArgs,
+                method.getFormalCtTypeParameters().size(),
                 body != null
         );
     }

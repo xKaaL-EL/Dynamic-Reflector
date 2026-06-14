@@ -13,6 +13,10 @@ public final class JavaClassInfo {
     private final List<MethodInfo> methods;
     private final int fieldCount;
     private final int staticFinalFieldCount;
+    private final boolean interfaceType;
+    private final boolean abstractType;
+    private final boolean enumType;
+    private final boolean annotationType;
 
     public JavaClassInfo(
             String qualifiedName,
@@ -22,7 +26,11 @@ public final class JavaClassInfo {
             List<String> interfaceNames,
             List<MethodInfo> methods,
             int fieldCount,
-            int staticFinalFieldCount
+            int staticFinalFieldCount,
+            boolean interfaceType,
+            boolean abstractType,
+            boolean enumType,
+            boolean annotationType
     ) {
         this.qualifiedName = qualifiedName;
         this.simpleName = simpleName;
@@ -32,6 +40,10 @@ public final class JavaClassInfo {
         this.methods = Collections.unmodifiableList(methods);
         this.fieldCount = fieldCount;
         this.staticFinalFieldCount = staticFinalFieldCount;
+        this.interfaceType = interfaceType;
+        this.abstractType = abstractType;
+        this.enumType = enumType;
+        this.annotationType = annotationType;
     }
 
     public String getQualifiedName() {
@@ -64,5 +76,21 @@ public final class JavaClassInfo {
 
     public int getStaticFinalFieldCount() {
         return staticFinalFieldCount;
+    }
+
+    public boolean isInterfaceType() {
+        return interfaceType;
+    }
+
+    public boolean isAbstractType() {
+        return abstractType;
+    }
+
+    public boolean isEnumType() {
+        return enumType;
+    }
+
+    public boolean isAnnotationType() {
+        return annotationType;
     }
 }
