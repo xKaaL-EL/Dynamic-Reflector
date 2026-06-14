@@ -19,15 +19,8 @@ public final class RefactorPlanner {
         ClassClassification classification = classifier.classify(classInfo);
         validateClass(classInfo, classification);
 
-        List<MethodPlan> methods = new ArrayList<>();
-        boolean unsupportedPublicInstanceMethod = false;
-        for (MethodInfo method : classInfo.getMethods()) {
-            MethodPlan methodPlan = planMethod(method);
-            methods.add(methodPlan);
-            if (!methodPlan.isIncluded() && isPublicInstanceMethod(method) && isUnsupportedSignatureReason(methodPlan.getReason())) {
-                unsupportedPublicInstanceMethod = true;
-            }
-        }
+        List<MethodPlan> methods = planMethods(classInfo);
+        boolean unsupportedPublicInstanceMethod = hasUnsupportedPublicInstanceMethod(methods);
 
         if (unsupportedPublicInstanceMethod) {
             throw new RefactorValidationException(
@@ -65,6 +58,25 @@ public final class RefactorPlanner {
                 wrapperPath,
                 methods
         );
+    }
+
+    public List<MethodPlan> planMethods(JavaClassInfo classInfo) {
+        List<MethodPlan> methods = new ArrayList<>();
+        for (MethodInfo method : classInfo.getMethods()) {
+            methods.add(planMethod(method));
+        }
+        return methods;
+    }
+
+    public boolean hasUnsupportedPublicInstanceMethod(List<MethodPlan> methods) {
+        for (MethodPlan methodPlan : methods) {
+            if (!methodPlan.isIncluded()
+                    && isPublicInstanceMethod(methodPlan.getMethod())
+                    && isUnsupportedSignatureReason(methodPlan.getReason())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void validateClass(JavaClassInfo classInfo, ClassClassification classification) throws RefactorValidationException {

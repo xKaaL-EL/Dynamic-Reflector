@@ -29,14 +29,32 @@ public final class ApplyFrameworkCommand extends CommandSupport implements Calla
             }
             AndroidProject project = locateProject(projectPath, basePackage);
             List<GeneratedFile> files = new FrameworkGenerator().generateMinimalFramework(project);
+            long created = files.stream().filter(GeneratedFile::isCreated).count();
+            long existing = files.size() - created;
+
+            topSeparator();
+            section("Initialize Runtime Framework");
             printProject(project);
             System.out.println();
-            System.out.println("Framework files:");
-            for (GeneratedFile file : files) {
-                System.out.println("  - " + (file.isCreated() ? "created " : "exists  ") + file.getPath());
+            System.out.println("Framework status: " + ConsoleStyle.success("OK"));
+            System.out.println("Created files: " + created);
+            System.out.println("Existing files: " + existing);
+            System.out.println("Generated package: "
+                    + project.getBasePackage() + ".protection");
+
+            if (verbose) {
+                System.out.println();
+                System.out.println(ConsoleStyle.heading("Framework files:"));
+                for (GeneratedFile file : files) {
+                    String status = file.isCreated() ? "created" : "exists";
+                    System.out.println("  * " + ConsoleStyle.success(status) + " " + displayPath(project, file.getPath()));
+                }
             }
             System.out.println();
             System.out.println("Gradle files were not modified. If you add premium-plugin as a module, wire it manually.");
+            System.out.println();
+            System.out.println(ConsoleStyle.heading("Next:"));
+            System.out.println("  dynamic-reflector --verify " + quoteIfNeeded(project.getProjectRoot()));
             return 0;
         } catch (Exception e) {
             return fail(e);

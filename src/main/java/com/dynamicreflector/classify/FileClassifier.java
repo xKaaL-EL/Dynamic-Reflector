@@ -67,15 +67,7 @@ public final class FileClassifier {
 
     private boolean isGeneratedProtectionFrameworkClass(JavaClassInfo info) {
         String qualifiedName = info.getQualifiedName();
-        if (qualifiedName == null || !qualifiedName.contains(".protection.")) {
-            return false;
-        }
-        String simpleName = info.getSimpleName();
-        return simpleName.equals("AndroidDexPluginLoader")
-                || simpleName.equals("PluginException")
-                || simpleName.equals("PluginRegistry")
-                || simpleName.equals("PremiumFeatureManager")
-                || simpleName.equals("PluginConfig");
+        return qualifiedName != null && qualifiedName.contains(".protection.");
     }
 
     private boolean isConstantsOnly(JavaClassInfo info) {

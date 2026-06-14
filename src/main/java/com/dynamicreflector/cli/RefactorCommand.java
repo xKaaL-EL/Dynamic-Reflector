@@ -9,7 +9,6 @@ import com.dynamicreflector.refactor.RefactorPlan;
 import com.dynamicreflector.refactor.RefactorPlanner;
 import com.dynamicreflector.spoon.JavaClassInfo;
 import com.dynamicreflector.spoon.MethodInfo;
-import com.dynamicreflector.spoon.SpoonClassInspector;
 import com.dynamicreflector.spoon.SpoonModelContext;
 import com.dynamicreflector.verify.FrameworkVerifier;
 import com.dynamicreflector.verify.VerifyResult;
@@ -17,7 +16,6 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
 import java.nio.file.Path;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 
 @Command(name = "refactor", description = "Prepare API and wrapper files for one safe class.")
@@ -50,18 +48,17 @@ public final class RefactorCommand extends CommandSupport implements Callable<In
 
             AndroidProject project = locateProject(projectPath, basePackage);
             SpoonModelContext model = loadModel(project);
-            Optional<JavaClassInfo> found = new SpoonClassInspector().findClass(model, className);
-            if (found.isEmpty()) {
-                System.err.println("Class not found: " + className);
-                return 1;
-            }
-
-            RefactorPlan plan = new RefactorPlanner().plan(project, found.get());
+            JavaClassInfo found = new ClassResolver().resolve(model, className);
+            RefactorPlan plan = new RefactorPlanner().plan(project, found);
             printPlan(plan);
 
             if (dryRun) {
                 System.out.println();
-                System.out.println("Dry run complete. No files were written.");
+                System.out.println(ConsoleStyle.success("Dry run complete. No files were written."));
+                System.out.println();
+                System.out.println(ConsoleStyle.heading("Next:"));
+                System.out.println("  dynamic-reflector --refactor "
+                        + quoteIfNeeded(project.getProjectRoot()) + " " + plan.getClassInfo().getSimpleName() + " --apply");
                 return 0;
             }
 
@@ -74,14 +71,19 @@ public final class RefactorCommand extends CommandSupport implements Callable<In
             }
 
             System.out.println();
-            System.out.println("Writing generated files:");
+            section("Generated Files");
             for (RefactorGeneratedFile generatedFile : new ApiWrapperGenerator().generate(plan)) {
-                System.out.println("  - " + generatedFile.getStatus().name().toLowerCase() + " " + generatedFile.getPath());
+                String status = generatedFile.getStatus().name().toLowerCase();
+                System.out.println("  * " + ConsoleStyle.success(status) + " "
+                        + displayPath(project, generatedFile.getPath()));
             }
             System.out.println();
             System.out.println("Original class was not modified.");
             System.out.println("Caller classes were not modified.");
             System.out.println("Plugin implementation generation is planned for the next batch.");
+            System.out.println();
+            System.out.println(ConsoleStyle.heading("Next:"));
+            System.out.println("  dynamic-reflector --verify " + quoteIfNeeded(project.getProjectRoot()));
             return 0;
         } catch (Exception e) {
             return fail(e);
@@ -104,31 +106,50 @@ public final class RefactorCommand extends CommandSupport implements Callable<In
         JavaClassInfo classInfo = plan.getClassInfo();
         ClassClassification classification = plan.getClassification();
 
+        topSeparator();
+        section("Refactor Preparation");
         printProject(plan.getProject());
         System.out.println();
         System.out.println("Selected class: " + classInfo.getQualifiedName());
-        System.out.println("Source file: " + classInfo.getFilePath());
+        if (verbose) {
+            System.out.println("Source file: " + classInfo.getFilePath());
+        }
         System.out.println("Classification: " + classification.getBucket());
         System.out.println("Reasons: " + String.join("; ", classification.getReasons()));
         System.out.println("Strategy: wrapper");
         System.out.println();
-        System.out.println("Planned generated files:");
-        System.out.println("  - API: " + plan.getApiPath());
-        System.out.println("  - Wrapper: " + plan.getWrapperPath());
+        System.out.println(ConsoleStyle.heading("Planned generated files:"));
+        System.out.println("  * API: " + displayPath(plan.getProject(), plan.getApiPath()));
+        System.out.println("  * Wrapper: " + displayPath(plan.getProject(), plan.getWrapperPath()));
         System.out.println();
-        System.out.println("Supported methods included:");
-        for (MethodPlan methodPlan : plan.getIncludedMethods()) {
-            System.out.println("  - " + methodLine(methodPlan.getMethod()));
-        }
+        printIncludedMethods(plan);
         System.out.println();
-        System.out.println("Skipped methods:");
-        for (MethodPlan methodPlan : plan.getSkippedMethods()) {
-            System.out.println("  - " + methodLine(methodPlan.getMethod()) + " [" + methodPlan.getReason() + "]");
-        }
+        printSkippedMethods(plan);
     }
 
     private String methodLine(MethodInfo method) {
-        return method.getReturnType() + " " + method.getName()
-                + "(" + String.join(", ", method.getParameterTypes()) + ")";
+        return MethodFormatter.signature(method, verbose);
+    }
+
+    private void printIncludedMethods(RefactorPlan plan) {
+        System.out.println(ConsoleStyle.heading("Included methods:"));
+        if (plan.getIncludedMethods().isEmpty()) {
+            System.out.println("  None");
+            return;
+        }
+        for (MethodPlan methodPlan : plan.getIncludedMethods()) {
+            System.out.println("  * " + methodLine(methodPlan.getMethod()));
+        }
+    }
+
+    private void printSkippedMethods(RefactorPlan plan) {
+        System.out.println(ConsoleStyle.heading("Skipped methods:"));
+        if (plan.getSkippedMethods().isEmpty()) {
+            System.out.println("  None");
+            return;
+        }
+        for (MethodPlan methodPlan : plan.getSkippedMethods()) {
+            System.out.println("  * " + methodLine(methodPlan.getMethod()) + " [" + methodPlan.getReason() + "]");
+        }
     }
 }
