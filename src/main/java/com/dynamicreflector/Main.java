@@ -4,6 +4,7 @@ import com.dynamicreflector.cli.AnalyzeClassCommand;
 import com.dynamicreflector.cli.AnalyzeCommand;
 import com.dynamicreflector.cli.ApplyFrameworkCommand;
 import com.dynamicreflector.cli.ConsoleStyle;
+import com.dynamicreflector.cli.GeneratePluginCommand;
 import com.dynamicreflector.cli.RefactorCommand;
 import com.dynamicreflector.cli.VerifyCommand;
 import picocli.CommandLine;
@@ -22,6 +23,7 @@ import java.util.List;
                 ApplyFrameworkCommand.class,
                 AnalyzeClassCommand.class,
                 RefactorCommand.class,
+                GeneratePluginCommand.class,
                 VerifyCommand.class
         }
 )
@@ -70,6 +72,7 @@ public final class Main implements Runnable {
             case "--inspect" -> inspectArgs(args);
             case "--init" -> initArgs(args);
             case "--refactor" -> refactorArgs(args);
+            case "--generate-plugin" -> generatePluginArgs(args);
             case "--verify" -> verifyArgs(args);
             default -> args;
         };
@@ -125,9 +128,26 @@ public final class Main implements Runnable {
         return appendVerboseIfPresent(args, "refactor", "--project", args[1], "--class", args[2], "--strategy", "wrapper", mode);
     }
 
+    private static String[] generatePluginArgs(String[] args) {
+        if (args.length != 4 && args.length != 5) {
+            throw new IllegalArgumentException("Expected: --generate-plugin <projectPath> <ClassName> --dry|--apply");
+        }
+        String mode = switch (args[3]) {
+            case "--dry" -> "--dry-run";
+            case "--apply" -> "--apply";
+            default -> throw new IllegalArgumentException("Expected --dry or --apply for --generate-plugin.");
+        };
+        return appendVerboseIfPresent(args, "generate-plugin", "--project", args[1], "--class", args[2], mode);
+    }
+
     private static String[] verifyArgs(String[] args) {
-        requireArgCount(args, 2, "--verify <projectPath>");
-        return appendVerboseIfPresent(args, "verify", "--project", args[1]);
+        if (args.length == 2 || (args.length == 3 && "--verbose".equals(args[2]))) {
+            return appendVerboseIfPresent(args, "verify", "--project", args[1]);
+        }
+        if (args.length == 3 || (args.length == 4 && "--verbose".equals(args[3]))) {
+            return appendVerboseIfPresent(args, "verify", "--project", args[1], "--class", args[2]);
+        }
+        throw new IllegalArgumentException("Expected: --verify <projectPath> [ClassName]");
     }
 
     private static void requireArgCount(String[] args, int expectedWithoutVerbose, String usage) {
@@ -166,7 +186,9 @@ public final class Main implements Runnable {
         System.out.println("  dynamic-reflector --init <projectPath>");
         System.out.println("  dynamic-reflector --refactor <projectPath> <ClassName> --dry");
         System.out.println("  dynamic-reflector --refactor <projectPath> <ClassName> --apply");
-        System.out.println("  dynamic-reflector --verify <projectPath>");
+        System.out.println("  dynamic-reflector --generate-plugin <projectPath> <ClassName> --dry");
+        System.out.println("  dynamic-reflector --generate-plugin <projectPath> <ClassName> --apply");
+        System.out.println("  dynamic-reflector --verify <projectPath> [ClassName]");
         System.out.println("  dynamic-reflector --examples");
         System.out.println("  dynamic-reflector --help");
         System.out.println();
@@ -201,8 +223,13 @@ public final class Main implements Runnable {
         System.out.println(ConsoleStyle.heading("Apply API/wrapper preparation:"));
         System.out.println("  dynamic-reflector --refactor \"D:\\Android Projects\\TrashRush\" TrashItem --apply");
         System.out.println();
+        System.out.println(ConsoleStyle.heading("Generate plugin implementation source:"));
+        System.out.println("  dynamic-reflector --generate-plugin \"D:\\Android Projects\\TrashRush\" TrashItem --dry");
+        System.out.println("  dynamic-reflector --generate-plugin \"D:\\Android Projects\\TrashRush\" TrashItem --apply");
+        System.out.println();
         System.out.println(ConsoleStyle.heading("Verify generated framework files:"));
         System.out.println("  dynamic-reflector --verify \"D:\\Android Projects\\TrashRush\"");
+        System.out.println("  dynamic-reflector --verify \"D:\\Android Projects\\TrashRush\" TrashItem");
         System.out.println();
         System.out.println("Add --verbose to show full paths and detailed project metadata.");
         System.out.println("From PowerShell in this folder, use .\\dynamic-reflector.bat --help.");

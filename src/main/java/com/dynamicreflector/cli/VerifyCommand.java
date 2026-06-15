@@ -1,9 +1,16 @@
 package com.dynamicreflector.cli;
 
 import com.dynamicreflector.project.AndroidProject;
+import com.dynamicreflector.refactor.RefactorPlan;
+import com.dynamicreflector.refactor.RefactorPlanner;
+import com.dynamicreflector.spoon.JavaClassInfo;
+import com.dynamicreflector.spoon.SpoonModelContext;
+import com.dynamicreflector.verify.FeatureVerifier;
+import com.dynamicreflector.verify.FeatureVerifyResult;
 import com.dynamicreflector.verify.FrameworkVerifier;
 import com.dynamicreflector.verify.OptionalGradleBuildRunner;
 import com.dynamicreflector.verify.VerifyResult;
+import com.dynamicreflector.verify.FeatureVerifyResult.FeatureVerifyCheck;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
@@ -19,6 +26,9 @@ public final class VerifyCommand extends CommandSupport implements Callable<Inte
 
     @Option(names = "--gradle-build", description = "Run Gradle build after lightweight verification.")
     private boolean gradleBuild;
+
+    @Option(names = "--class", description = "Optional class name for feature-level verification.")
+    private String className;
 
     @Option(names = "--base-package", description = "Fallback base package if namespace/applicationId detection fails.")
     private String basePackage;
@@ -38,9 +48,21 @@ public final class VerifyCommand extends CommandSupport implements Callable<Inte
                 return 1;
             }
 
+            if (className != null) {
+                SpoonModelContext model = loadModel(project);
+                JavaClassInfo found = new ClassResolver().resolve(model, className);
+                RefactorPlan plan = new RefactorPlanner().plan(project, found);
+                FeatureVerifyResult featureResult = new FeatureVerifier().verify(project, model, plan);
+                printFeatureSummary(featureResult);
+                if (!featureResult.isSuccess()) {
+                    return 1;
+                }
+            }
+
             if (gradleBuild) {
                 return new OptionalGradleBuildRunner().run(project.getProjectRoot());
             }
+            System.out.println();
             return 0;
         } catch (Exception e) {
             return fail(e);
@@ -87,5 +109,21 @@ public final class VerifyCommand extends CommandSupport implements Callable<Inte
             System.out.println(ConsoleStyle.heading("Next:"));
             System.out.println("  Build your Android project to confirm everything compiles.");
         }
+    }
+
+    private void printFeatureSummary(FeatureVerifyResult result) {
+        System.out.println();
+        section("Feature Verification");
+        for (FeatureVerifyCheck check : result.getChecks()) {
+            String status = check.success() ? ConsoleStyle.success("found") : ConsoleStyle.error("missing");
+            if (check.label().equals("Protection candidate exclusion")) {
+                status = check.success() ? ConsoleStyle.success("OK") : ConsoleStyle.error("FAILED");
+            }
+            System.out.println(check.label() + ": " + status);
+            if (verbose || !check.success()) {
+                System.out.println("  " + check.detail());
+            }
+        }
+        System.out.println("Wrapper conversion: pending Batch 4");
     }
 }
