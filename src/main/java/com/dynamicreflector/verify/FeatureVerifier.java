@@ -41,6 +41,12 @@ public final class FeatureVerifier {
                 protectionClassesExcluded(model),
                 "protection.* generated classes remain excluded"
         ));
+        DelegationStatus delegationStatus = new OriginalClassDelegationVerifier().status(model, plan);
+        checks.add(new FeatureVerifyCheck(
+                "Original class delegation",
+                delegationStatus == DelegationStatus.CONVERTED,
+                delegationStatus.getLabel()
+        ));
 
         boolean success = checks.stream().allMatch(FeatureVerifyCheck::success);
         return new FeatureVerifyResult(success, checks);

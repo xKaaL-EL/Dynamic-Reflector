@@ -3,6 +3,7 @@ package com.dynamicreflector;
 import com.dynamicreflector.cli.AnalyzeClassCommand;
 import com.dynamicreflector.cli.AnalyzeCommand;
 import com.dynamicreflector.cli.ApplyFrameworkCommand;
+import com.dynamicreflector.cli.ConvertWrapperCommand;
 import com.dynamicreflector.cli.ConsoleStyle;
 import com.dynamicreflector.cli.GeneratePluginCommand;
 import com.dynamicreflector.cli.RefactorCommand;
@@ -24,6 +25,7 @@ import java.util.List;
                 AnalyzeClassCommand.class,
                 RefactorCommand.class,
                 GeneratePluginCommand.class,
+                ConvertWrapperCommand.class,
                 VerifyCommand.class
         }
 )
@@ -73,6 +75,7 @@ public final class Main implements Runnable {
             case "--init" -> initArgs(args);
             case "--refactor" -> refactorArgs(args);
             case "--generate-plugin" -> generatePluginArgs(args);
+            case "--convert-wrapper" -> convertWrapperArgs(args);
             case "--verify" -> verifyArgs(args);
             default -> args;
         };
@@ -140,6 +143,18 @@ public final class Main implements Runnable {
         return appendVerboseIfPresent(args, "generate-plugin", "--project", args[1], "--class", args[2], mode);
     }
 
+    private static String[] convertWrapperArgs(String[] args) {
+        if (args.length != 4 && args.length != 5) {
+            throw new IllegalArgumentException("Expected: --convert-wrapper <projectPath> <ClassName> --dry|--apply");
+        }
+        String mode = switch (args[3]) {
+            case "--dry" -> "--dry-run";
+            case "--apply" -> "--apply";
+            default -> throw new IllegalArgumentException("Expected --dry or --apply for --convert-wrapper.");
+        };
+        return appendVerboseIfPresent(args, "convert-wrapper", "--project", args[1], "--class", args[2], mode);
+    }
+
     private static String[] verifyArgs(String[] args) {
         if (args.length == 2 || (args.length == 3 && "--verbose".equals(args[2]))) {
             return appendVerboseIfPresent(args, "verify", "--project", args[1]);
@@ -188,6 +203,8 @@ public final class Main implements Runnable {
         System.out.println("  dynamic-reflector --refactor <projectPath> <ClassName> --apply");
         System.out.println("  dynamic-reflector --generate-plugin <projectPath> <ClassName> --dry");
         System.out.println("  dynamic-reflector --generate-plugin <projectPath> <ClassName> --apply");
+        System.out.println("  dynamic-reflector --convert-wrapper <projectPath> <ClassName> --dry");
+        System.out.println("  dynamic-reflector --convert-wrapper <projectPath> <ClassName> --apply");
         System.out.println("  dynamic-reflector --verify <projectPath> [ClassName]");
         System.out.println("  dynamic-reflector --examples");
         System.out.println("  dynamic-reflector --help");
@@ -209,27 +226,31 @@ public final class Main implements Runnable {
         System.out.println("Short alias: dyrf");
         System.out.println();
         System.out.println(ConsoleStyle.heading("Analyze a project:"));
-        System.out.println("  dynamic-reflector --analyse \"D:\\Android Projects\\TrashRush\"");
+        System.out.println("  dynamic-reflector --analyse \"D:\\Android Projects\\ExampleApp\"");
         System.out.println();
         System.out.println(ConsoleStyle.heading("Inspect one class:"));
-        System.out.println("  dynamic-reflector --inspect \"D:\\Android Projects\\TrashRush\" TrashItem");
+        System.out.println("  dynamic-reflector --inspect \"D:\\Android Projects\\ExampleApp\" PremiumCalculator");
         System.out.println();
         System.out.println(ConsoleStyle.heading("Generate the minimal runtime framework:"));
-        System.out.println("  dynamic-reflector --init \"D:\\Android Projects\\TrashRush\"");
+        System.out.println("  dynamic-reflector --init \"D:\\Android Projects\\ExampleApp\"");
         System.out.println();
         System.out.println(ConsoleStyle.heading("Dry-run API/wrapper preparation:"));
-        System.out.println("  dynamic-reflector --refactor \"D:\\Android Projects\\TrashRush\" TrashItem --dry");
+        System.out.println("  dynamic-reflector --refactor \"D:\\Android Projects\\ExampleApp\" PremiumCalculator --dry");
         System.out.println();
         System.out.println(ConsoleStyle.heading("Apply API/wrapper preparation:"));
-        System.out.println("  dynamic-reflector --refactor \"D:\\Android Projects\\TrashRush\" TrashItem --apply");
+        System.out.println("  dynamic-reflector --refactor \"D:\\Android Projects\\ExampleApp\" PremiumCalculator --apply");
         System.out.println();
         System.out.println(ConsoleStyle.heading("Generate plugin implementation source:"));
-        System.out.println("  dynamic-reflector --generate-plugin \"D:\\Android Projects\\TrashRush\" TrashItem --dry");
-        System.out.println("  dynamic-reflector --generate-plugin \"D:\\Android Projects\\TrashRush\" TrashItem --apply");
+        System.out.println("  dynamic-reflector --generate-plugin \"D:\\Android Projects\\ExampleApp\" PremiumCalculator --dry");
+        System.out.println("  dynamic-reflector --generate-plugin \"D:\\Android Projects\\ExampleApp\" PremiumCalculator --apply");
+        System.out.println();
+        System.out.println(ConsoleStyle.heading("Convert original class to plugin delegation:"));
+        System.out.println("  dynamic-reflector --convert-wrapper \"D:\\Android Projects\\ExampleApp\" PremiumCalculator --dry");
+        System.out.println("  dynamic-reflector --convert-wrapper \"D:\\Android Projects\\ExampleApp\" PremiumCalculator --apply");
         System.out.println();
         System.out.println(ConsoleStyle.heading("Verify generated framework files:"));
-        System.out.println("  dynamic-reflector --verify \"D:\\Android Projects\\TrashRush\"");
-        System.out.println("  dynamic-reflector --verify \"D:\\Android Projects\\TrashRush\" TrashItem");
+        System.out.println("  dynamic-reflector --verify \"D:\\Android Projects\\ExampleApp\"");
+        System.out.println("  dynamic-reflector --verify \"D:\\Android Projects\\ExampleApp\" PremiumCalculator");
         System.out.println();
         System.out.println("Add --verbose to show full paths and detailed project metadata.");
         System.out.println("From PowerShell in this folder, use .\\dynamic-reflector.bat --help.");

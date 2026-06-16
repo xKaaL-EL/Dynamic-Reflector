@@ -218,7 +218,7 @@ final class GeneratePluginCommandTest {
     }
 
     @Test
-    void featureVerifyChecksBatchThreeArtifacts() throws Exception {
+    void featureVerifyRequiresBatchFourConversionAfterBatchThreeArtifacts() throws Exception {
         Path project = createAndroidProject();
         writeScoreCalculator(project);
         prepareFrameworkAndApi(project);
@@ -226,14 +226,14 @@ final class GeneratePluginCommandTest {
 
         CapturedResult result = capture("--verify", project.toString(), "ScoreCalculator");
 
-        assertEquals(0, result.exitCode);
+        assertEquals(1, result.exitCode);
         assertTrue(result.out.contains("Feature Verification"));
         assertTrue(result.out.contains("API: found"));
         assertTrue(result.out.contains("Wrapper: found"));
         assertTrue(result.out.contains("Plugin implementation: found"));
         assertTrue(result.out.contains("PluginConfig mapping: found"));
         assertTrue(result.out.contains("Allowed implementation prefix: found"));
-        assertTrue(result.out.contains("Wrapper conversion: pending Batch 4"));
+        assertTrue(result.out.contains("Original class delegation: not converted"));
     }
 
     @Test

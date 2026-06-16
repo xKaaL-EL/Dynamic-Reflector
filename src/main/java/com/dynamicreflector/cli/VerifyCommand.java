@@ -115,6 +115,11 @@ public final class VerifyCommand extends CommandSupport implements Callable<Inte
         System.out.println();
         section("Feature Verification");
         for (FeatureVerifyCheck check : result.getChecks()) {
+            if (check.label().equals("Original class delegation")) {
+                System.out.println(check.label() + ": "
+                        + (check.success() ? ConsoleStyle.success(check.detail()) : ConsoleStyle.error(check.detail())));
+                continue;
+            }
             String status = check.success() ? ConsoleStyle.success("found") : ConsoleStyle.error("missing");
             if (check.label().equals("Protection candidate exclusion")) {
                 status = check.success() ? ConsoleStyle.success("OK") : ConsoleStyle.error("FAILED");
@@ -124,6 +129,5 @@ public final class VerifyCommand extends CommandSupport implements Callable<Inte
                 System.out.println("  " + check.detail());
             }
         }
-        System.out.println("Wrapper conversion: pending Batch 4");
     }
 }
